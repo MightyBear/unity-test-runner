@@ -165,7 +165,7 @@ const Docker = {
         --cap-add=NET_ADMIN \
         --cap-add=SYS_ADMIN \
         --device=/dev/net/tun \
-        --user=0 \        
+        --user=0 \
         --env UNITY_LICENSE \
         --env UNITY_LICENSE_FILE \
         --env UNITY_EMAIL \
