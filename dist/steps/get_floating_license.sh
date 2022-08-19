@@ -19,5 +19,5 @@ zerotier-cli info
 # Healthcheck on Licensing Server
 curl --connect-timeout 10 'http://10.243.6.149:777/v1/status'
 
-# Get Floating License
-/opt/unity/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client --acquire-floating
+# Get Test Floating License
+# /opt/unity/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client --acquire-floating
