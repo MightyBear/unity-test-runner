@@ -19,5 +19,11 @@ zerotier-cli info
 # Healthcheck on Licensing Server
 curl --connect-timeout 10 'http://10.243.6.149:777/v1/status'
 
-# Get Test Floating License
-# /opt/unity/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client --acquire-floating
+# Get Floating License
+/opt/unity/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client --acquire-floating > license.txt
+PARSEDFILE=$(grep -oP '\".*?\"' < license.txt | tr -d '"')
+export FLOATING_LICENSE
+FLOATING_LICENSE=$(sed -n 2p <<< "$PARSEDFILE")
+FLOATING_LICENSE_TIMEOUT=$(sed -n 4p <<< "$PARSEDFILE")
+
+echo "Acquired floating license: \"$FLOATING_LICENSE\" with timeout $FLOATING_LICENSE_TIMEOUT"
