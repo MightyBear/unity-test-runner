@@ -21,6 +21,23 @@ zerotier-cli info
 zerotier-cli listnetworks
 
 # Get Floating License
+for i in {1..5}
+
+do
+	OUTPUT=$(/opt/unity/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client --acquire-floating)
+	echo "Try number $i:"
+
+	if [ $(echo "$OUTPUT" | grep -Ecim1 '(Created|Renewed)') -eq 1 ]; then
+		echo $OUTPUT
+		echo "Successfully acquired license!"
+		break;
+	else
+		echo $OUTPUT
+		echo "Waiting for 60sec before retry..."
+		sleep 60;
+	fi;
+done
+
 /opt/unity/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client --acquire-floating > license.txt
 cat license.txt
 PARSEDFILE=$(grep -oP '\".*?\"' < license.txt | tr -d '"')
