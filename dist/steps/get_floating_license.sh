@@ -21,11 +21,11 @@ zerotier-cli info
 zerotier-cli listnetworks
 
 # Get Floating License
-for i in {1..5}
+for i in {1..15}
 
 do
 	OUTPUT=$(/opt/unity/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client --acquire-floating)
-	echo "Try number $i:"
+	echo "Try number $i of 15:"
 
 	if [ $(echo "$OUTPUT" | grep -Ecim1 '(Created|Renewed)') -eq 1 ]; then
 		echo $OUTPUT
