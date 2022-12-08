@@ -4,6 +4,9 @@
 echo "Changing to \"$ACTIVATE_LICENSE_PATH\" directory."
 pushd "$ACTIVATE_LICENSE_PATH"
 
+echo "Returning floating license: \"$FLOATING_LICENSE\"" 
+/opt/unity/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client --return-floating "$FLOATING_LICENSE"
+
 if [[ -n "$UNITY_SERIAL" ]]; then
   #
   # PROFESSIONAL (SERIAL) LICENSE MODE
