@@ -4,16 +4,28 @@ NETWORK_ID="93afae59635206ac"
 
 # Install zerotier
 apt-get update
-apt install -y software-properties-common
-apt-get update
-add-apt-repository ppa:git-core/ppa
-apt install -y gpg
-curl -s 'https://raw.githubusercontent.com/zerotier/ZeroTierOne/master/doc/contact%40zerotier.com.gpg' | gpg --import && if z=$(curl -s 'https://install.zerotier.com/' | gpg); then echo "$z" | bash; fi
-zerotier-cli status
+curl https://install.zerotier.com | bash
 /usr/sbin/zerotier-one -d
 
-# Join network
-zerotier-cli join "$NETWORK_ID"
+# Join Network
+for i in {1..5}
+
+do
+	OUTPUT=$(zerotier-cli join "$NETWORK_ID")
+	echo "Try number $i of 5:"
+
+	if [ $(echo "$OUTPUT" | grep -Ecim1 '200') -eq 1 ]; then
+		echo $OUTPUT
+		echo "Succesfully connected to zerotier!"
+		break;
+	else
+		echo $OUTPUT
+		echo "Waiting for 10sec before retry..."
+		sleep 10;
+	fi;
+done
+
+zerotier-cli status
 zerotier-cli info
 
 # Healthcheck on Licensing Server
