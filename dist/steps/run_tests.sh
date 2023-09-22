@@ -37,6 +37,76 @@ echo "Using custom parameters $CUSTOM_PARAMETERS."
 echo "Using Unity version \"$UNITY_VERSION\" to test."
 
 #
+# Create an empty project for testing if in package mode
+#
+
+if [ "$PACKAGE_MODE" = "true" ]; then
+  echo "Running tests on a Unity package rather than a Unity project."
+
+  if ! command -v jq &> /dev/null
+  then
+      echo "jq could not be found. This is required for package mode, and is likely the result of using a custom Docker image. Please use the default image or install jq to your custom image."
+      exit 1
+  fi
+
+  echo ""
+  echo "###########################"
+  echo "#    Package Folder       #"
+  echo "###########################"
+  echo ""
+
+  ls -la  "$UNITY_PROJECT_PATH"
+  echo ""
+
+  echo "Creating an empty Unity project to add the package $PACKAGE_NAME to."
+
+  TEMP_PROJECT_PATH="./TempProject"
+
+  unity-editor \
+    -batchmode \
+    -createProject "$TEMP_PROJECT_PATH" \
+    -quit
+
+  # use jq to add the package to the temp project through manually modifying Packages/manifest.json
+  echo "Adding package to the temporary project's dependencies and testables..."
+  echo ""
+
+  PACKAGE_MANIFEST_PATH="$TEMP_PROJECT_PATH/Packages/manifest.json"
+  if [ ! -f "$PACKAGE_MANIFEST_PATH" ]; then
+      echo "Packages/mainfest.json was not created properly. This indicates a problem with the Action, not with your package. Logging directories and aborting..."
+
+      echo ""
+      echo "###########################"
+      echo "#   Temp Project Folder   #"
+      echo "###########################"
+      echo ""
+
+      ls -a "$TEMP_PROJECT_PATH"
+
+      echo ""
+      echo "################################"
+      echo "# Temp Project Packages Folder #"
+      echo "################################"
+      echo ""
+
+      ls -a "$TEMP_PROJECT_PATH/Packages"
+
+      exit 1
+  fi
+
+  PACKAGE_MANIFEST_JSON=$(cat "$PACKAGE_MANIFEST_PATH")
+  echo "$PACKAGE_MANIFEST_JSON" | \
+    jq \
+    --arg packageName "$PACKAGE_NAME" \
+    --arg projectPath "$UNITY_PROJECT_PATH" \
+    '.dependencies += {"com.unity.testtools.codecoverage": "1.1.1"} | .dependencies += {"\($packageName)": "file:\($projectPath)"} | . += {testables: ["\($packageName)"]}' \
+    > "$PACKAGE_MANIFEST_PATH"
+
+  UNITY_PROJECT_PATH="$TEMP_PROJECT_PATH"
+fi
+
+
+#
 # Overall info
 #
 
@@ -59,16 +129,36 @@ ls -alh $UNITY_PROJECT_PATH
 # Testing for each platform
 #
 for platform in ${TEST_PLATFORMS//;/ }; do
-  echo ""
-  echo "###########################"
-  echo "#   Testing in $platform  #"
-  echo "###########################"
-  echo ""
+  if [[ "$platform" == "standalone" ]]; then
+    echo ""
+    echo "###########################"
+    echo "#   Building Standalone   #"
+    echo "###########################"
+    echo ""
 
-  if [[ "$platform" != "COMBINE_RESULTS" ]]; then
-    runTests="-runTests -testPlatform $platform -testResults $FULL_ARTIFACTS_PATH/$platform-results.xml"
+    # Create directories if they do not exist
+    mkdir -p "$UNITY_PROJECT_PATH/Assets/Editor/"
+    mkdir -p "$UNITY_PROJECT_PATH/Assets/Player/"
+    # Copy the scripts
+    cp -R "$ACTION_FOLDER/UnityStandaloneScripts/Assets/Editor/" "$UNITY_PROJECT_PATH/Assets/Editor/"
+    cp -R "$ACTION_FOLDER/UnityStandaloneScripts/Assets/Player/" "$UNITY_PROJECT_PATH/Assets/Player/"
+    # Verify recursive paths
+    ls -Ralph "$UNITY_PROJECT_PATH/Assets/Editor/"
+    ls -Ralph "$UNITY_PROJECT_PATH/Assets/Player/"
+
+    runTests="-runTests -testPlatform StandaloneLinux64 -builtTestRunnerPath $UNITY_PROJECT_PATH/Build/UnityTestRunner-Standalone"
   else
-    runTests="-quit"
+    echo ""
+    echo "###########################"
+    echo "#   Testing in $platform  #"
+    echo "###########################"
+    echo ""
+
+    if [[ "$platform" != "COMBINE_RESULTS" ]]; then
+      runTests="-runTests -testPlatform $platform -testResults $FULL_ARTIFACTS_PATH/$platform-results.xml"
+    else
+      runTests="-quit"
+    fi
   fi
 
   unity-editor \
@@ -87,6 +177,29 @@ for platform in ${TEST_PLATFORMS//;/ }; do
 
   # Print unity log output
   cat "$FULL_ARTIFACTS_PATH/$platform.log"
+
+  if [[ $TEST_EXIT_CODE -eq 0 && "$platform" == "standalone" ]]; then
+    echo ""
+    echo "###########################"
+    echo "#    Testing Standalone   #"
+    echo "###########################"
+    echo ""
+
+    # Code Coverage currently only supports code ran in the Editor and not in Standalone/Player.
+    # https://docs.unity.cn/Packages/com.unity.testtools.codecoverage@1.1/manual/TechnicalDetails.html#how-it-works
+    
+    xvfb-run -a -e /dev/stdout "$UNITY_PROJECT_PATH/Build/UnityTestRunner-Standalone" \
+      -batchmode \
+      -nographics \
+      -logFile "$FULL_ARTIFACTS_PATH/$platform-player.log" \
+      -testResults "$FULL_ARTIFACTS_PATH/$platform-results.xml"
+
+    # Catch exit code
+    TEST_EXIT_CODE=$?
+
+    # Print player log output
+    cat "$FULL_ARTIFACTS_PATH/$platform-player.log"
+  fi
 
   # Display results
   if [ $TEST_EXIT_CODE -eq 0 ]; then
