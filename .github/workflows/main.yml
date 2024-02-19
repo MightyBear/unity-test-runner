@@ -32,10 +32,11 @@ jobs:
         projectPath:
           - unity-project-with-correct-tests
         unityVersion:
-          - 2019.2.11f1
+          - 2022.3.7f1
         testMode:
           - playmode
           - editmode
+          - standalone
     steps:
       ###########################
       #         Checkout        #
@@ -77,7 +78,7 @@ jobs:
         projectPath:
           - unity-project-with-correct-tests
         unityVersion:
-          - 2019.2.11f1
+          - 2022.3.7f1
     steps:
       ###########################
       #         Checkout        #
@@ -105,6 +106,7 @@ jobs:
           projectPath: ${{ matrix.projectPath }}
           unityVersion: ${{ matrix.unityVersion }}
           testMode: all
+          coverageOptions: 'generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;assemblyFilters:+MyScripts;dontClear'
           # Test implicit artifactsPath, by not setting it
 
       # Upload artifacts
@@ -123,6 +125,14 @@ jobs:
           path: ${{ steps.allTests.outputs.coveragePath }}
           retention-days: 7
 
+      # Upload coverage
+      - name: Upload coverage results
+        uses: actions/upload-artifact@v3
+        with:
+          name: Coverage results (all)
+          path: ${{ steps.allTests.outputs.coveragePath }}
+          retention-days: 14
+
   testRunnerInEditMode:
     name: Test edit mode 📝
     runs-on: ubuntu-latest
@@ -130,7 +140,7 @@ jobs:
       fail-fast: false
       matrix:
         unityVersion:
-          - 2019.2.11f1
+          - 2022.3.7f1
         projectPath:
           - unity-project-with-correct-tests
     steps:
@@ -178,6 +188,14 @@ jobs:
           path: ${{ steps.editMode.outputs.coveragePath }}
           retention-days: 7
 
+      # Upload coverage
+      - name: Upload coverage results
+        uses: actions/upload-artifact@v3
+        with:
+          name: Coverage results (edit mode)
+          path: ${{ steps.editMode.outputs.coveragePath }}
+          retention-days: 14
+
   testRunnerInPlayMode:
     name: Test play mode 📺
     runs-on: ubuntu-latest
@@ -187,7 +205,7 @@ jobs:
         projectPath:
           - unity-project-with-correct-tests
         unityVersion:
-          - 2019.2.11f1
+          - 2022.3.7f1
     steps:
       ###########################
       #         Checkout        #
@@ -334,6 +352,115 @@ jobs:
           path: ${{ steps.standalone.outputs.artifactsPath }}
           retention-days: 7
 
+      # Upload coverage
+      - name: Upload coverage results
+        uses: actions/upload-artifact@v3
+        with:
+          name: Coverage results (play mode)
+          path: ${{ steps.playMode.outputs.coveragePath }}
+          retention-days: 14
+
+  testRunnerInStandalone:
+    name: Test standalone 📺
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        projectPath:
+          - unity-project-with-correct-tests
+        unityVersion:
+          - 2022.3.7f1
+    steps:
+      ###########################
+      #         Checkout        #
+      ###########################
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+
+      ###########################
+      #          Cache          #
+      ###########################
+      - uses: actions/cache@v3
+        with:
+          path: ${{ matrix.projectPath }}/Library
+          key: Library-${{ matrix.projectPath }}-${{ matrix.targetPlatform }}
+          restore-keys: |
+            Library-${{ matrix.projectPath }}-
+            Library-
+
+      # Configure test runner
+      - name: Run tests
+        id: standalone
+        uses: ./
+        with:
+          projectPath: ${{ matrix.projectPath }}
+          unityVersion: ${{ matrix.unityVersion }}
+          testMode: standalone
+          artifactsPath: artifacts/standalone
+
+      # Upload artifacts
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: Test results (play mode)
+          path: ${{ steps.standalone.outputs.artifactsPath }}
+          retention-days: 14
+
+  testRunnerInStandaloneWithIL2CPP:
+    name: Test standalone with IL2CPP 📺
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        projectPath:
+          - unity-project-with-correct-tests
+        unityVersion:
+          - 2022.3.7f1 # Only 2019.4+ docker images contain the IL2CPP backend installed.
+    steps:
+      ###########################
+      #         Checkout        #
+      ###########################
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+
+      ###########################
+      #          Cache          #
+      ###########################
+      - uses: actions/cache@v3
+        with:
+          path: ${{ matrix.projectPath }}/Library
+          key: Library-${{ matrix.projectPath }}-${{ matrix.targetPlatform }}
+          restore-keys: |
+            Library-${{ matrix.projectPath }}-
+            Library-
+
+      # Set scripting backend to IL2CPP
+      - name: Rewrite ProjectSettings
+        run: |
+          DefineOriginal="  scriptingBackend: {}"
+          DefineReplace="  scriptingBackend: \\n    Standalone: 1"
+          sed -i "{s/$DefineOriginal/$DefineReplace/g}" ${{ matrix.projectPath }}/ProjectSettings/ProjectSettings.asset
+
+      # Configure test runner
+      - name: Run tests
+        id: standalone
+        uses: ./
+        with:
+          projectPath: ${{ matrix.projectPath }}
+          unityVersion: ${{ matrix.unityVersion }}
+          testMode: standalone
+          artifactsPath: artifacts/standalone
+
+      # Upload artifacts
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: Test results (play mode)
+          path: ${{ steps.standalone.outputs.artifactsPath }}
+          retention-days: 14
+
   testEachModeSequentially:
     name: Test each mode sequentially 👩‍👩‍👧‍👦 # don't try this at home (it's much slower)
     runs-on: ubuntu-latest
@@ -341,7 +468,7 @@ jobs:
       fail-fast: false
       matrix:
         unityVersion:
-          - 2019.2.11f1
+          - 2022.3.7f1
         projectPath:
           - unity-project-with-correct-tests
     steps:
@@ -379,6 +506,15 @@ jobs:
           projectPath: ${{ matrix.projectPath }}
           unityVersion: ${{ matrix.unityVersion }}
           testMode: playmode
+          artifactsPath: artifacts/playmode
+
+      # Configure third test runner
+      - name: Tests in standalone 📺
+        uses: ./
+        with:
+          projectPath: ${{ matrix.projectPath }}
+          unityVersion: ${{ matrix.unityVersion }}
+          testMode: standalone
           artifactsPath: artifacts/playmode
 
       # Upload combined artifacts

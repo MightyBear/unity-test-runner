@@ -11,6 +11,7 @@ mkdir -p "$ACTIVATE_LICENSE_PATH"
 # Run steps
 #
 
+# source /steps/activate.sh
 source /steps/set_gitcredential.sh
 source /steps/move_services-config.sh
 source /steps/get_floating_license.sh
