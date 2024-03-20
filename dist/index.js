@@ -289,6 +289,10 @@ const Docker = {
             --workdir /github/workspace \
             --cidfile "${cidfile}" \
             --rm \
+            --cap-add=NET_ADMIN \
+            --cap-add=SYS_ADMIN \
+            --device=/dev/net/tun \
+            --user=0 \
             ${image_environment_factory_1.default.getEnvVarString(parameters)} \
             --env GIT_CONFIG_EXTENSIONS \
             --env TEST_PLATFORMS="${testPlatforms}" \

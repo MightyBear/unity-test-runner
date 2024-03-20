@@ -5,12 +5,13 @@
 #
 source /steps/set_extra_git_configs.sh
 source /steps/set_gitcredential.sh
-source /steps/activate.sh
+source /steps/get_floating_license.sh
+# source /steps/activate.sh
 
 # If we didn't activate successfully, exit with the exit code from the activation step.
-if [[ $UNITY_EXIT_CODE -ne 0 ]]; then
-  exit $UNITY_EXIT_CODE
-fi
+# if [[ $UNITY_EXIT_CODE -ne 0 ]]; then
+#   exit $UNITY_EXIT_CODE
+# fi
 
 source /steps/run_tests.sh
 source /steps/return_license.sh
