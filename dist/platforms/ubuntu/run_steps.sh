@@ -5,6 +5,7 @@
 #
 source /steps/set_extra_git_configs.sh
 source /steps/set_gitcredential.sh
+source /steps/move_services-config.sh
 source /steps/get_floating_license.sh
 # source /steps/activate.sh
 
