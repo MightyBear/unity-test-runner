@@ -161,6 +161,7 @@ ls -alh "$UNITY_PROJECT_PATH"
 # Testing for each platform
 #
 for platform in ${TEST_PLATFORMS//;/ }; do
+  source /steps/get_floating_license.sh
   if [[ "$platform" == "standalone" ]]; then
     echo ""
     echo "###########################"
@@ -258,6 +259,7 @@ for platform in ${TEST_PLATFORMS//;/ }; do
     cat "$FULL_ARTIFACTS_PATH/$platform-results.xml"
     cat "$FULL_ARTIFACTS_PATH/$platform-results.xml" | grep test-run | grep Passed
   fi
+  source /steps/return_license.sh
 done
 
 #
