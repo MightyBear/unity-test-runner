@@ -161,7 +161,7 @@ ls -alh "$UNITY_PROJECT_PATH"
 # Testing for each platform
 #
 for platform in ${TEST_PLATFORMS//;/ }; do
-  source /steps/get_floating_license.sh
+  
   if [[ "$platform" == "standalone" ]]; then
     echo ""
     echo "###########################"
@@ -194,6 +194,7 @@ for platform in ${TEST_PLATFORMS//;/ }; do
     fi
   fi
 
+  source /steps/get_floating_license.sh
   unity-editor \
     -batchmode \
     -logFile "$FULL_ARTIFACTS_PATH/$platform.log" \
